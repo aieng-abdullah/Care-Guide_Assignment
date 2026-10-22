@@ -16,7 +16,7 @@ Businesses integrate with many external APIs (patient data, appointments, lab re
 ## Features
 
 - **Anomaly detection** — 5 pure rule functions: high response time (warn/critical thresholds), 5xx failures, 4xx client errors, zero records on 2xx, missing records; one combined alert per API per run
-- **LLM alert text** — short human-readable message via an OpenRouter free model (`minimax/minimax-m3.1-flash:free`, configurable), prompt-injection-safe delimited input, automatic fallback template when the LLM is missing, fails, times out, or returns empty (`alert_source: "fallback"`)
+- **LLM alert text** — short human-readable message via an OpenRouter free model (`nvidia/nemotron-3.5-lightning:free`, configurable), prompt-injection-safe delimited input, automatic fallback template when the LLM is missing, fails, times out, or returns empty (`alert_source: "fallback"`)
 - **Deduplication** — active alerts for the same API + rule set increment `occurrences` and update `last_seen` instead of creating duplicates
 - **Batch processing** — up to 100 items per `POST /monitor`; one bad item never blocks the rest; LLM calls concurrency-limited (default 5)
 - **Dashboard** — React (Vite): alert cards with severity, metrics, AI message; filters; auto-refresh; resolve button; JSON submit form
@@ -162,7 +162,8 @@ All tunables live in `backend/.env` (see `backend/.env.example`):
 | `THRESHOLD_RESPONSE_WARN_MS` | `3000` | Response-time warning threshold |
 | `THRESHOLD_RESPONSE_CRIT_MS` | `5000` | Response-time critical threshold |
 | `LLM_BASE_URL` | `https://openrouter.ai/api/v1` | OpenAI-compatible API endpoint |
-| `LLM_MODEL` | `minimax/minimax-m3.1-flash:free` | Any OpenRouter free model id |
+| `LLM_MODEL` | `nvidia/nemotron-3.5-lightning:free` | Any OpenRouter free (`:free`) model id; pick non-reasoning ones — reasoning models burn the token cap before emitting text |
+| `LLM_MAX_TOKENS` | `300` | Completion cap per alert |
 | `LLM_API_KEY` | — | OpenRouter key; empty → fallback templates |
 | `LLM_TIMEOUT_MS` | `5000` | LLM request timeout |
 | `LLM_CONCURRENCY` | `5` | Max parallel LLM calls |
@@ -177,6 +178,41 @@ cd frontend && npm run lint && npm run build
 ```
 
 Integration tests mock the LLM HTTP client and require MongoDB running.
+
+## Deployment (Vercel)
+
+One Vercel project serves the whole system:
+
+- **API** — `api/index.js` exports the Express app; Vercel runs it as a single function (Mongo connects lazily per cold start via `backend/src/db.js`).
+- **Dashboard** — `vercel.json` builds `frontend/` and serves `frontend/dist` as static assets.
+- **Routing** — static files first, everything else rewrites to the API function (same origin, no CORS in production).
+- **Logs** — file transports are disabled on Vercel (`VERCEL` env); Winston logs go to the function console.
+
+### One-time setup
+
+1. **MongoDB Atlas** (local Docker is not reachable from Vercel): create a free M0 cluster at https://cloud.mongodb.com → get the connection string (`mongodb+srv://...`).
+2. **Import the repo** at https://vercel.com/new (Root Directory = repository root).
+3. **Set environment variables** in the Vercel project (Settings → Environment Variables):
+
+| Variable | Value |
+|---|---|
+| `MONGO_URI` | Atlas `mongodb+srv://` connection string |
+| `LLM_API_KEY` | OpenRouter key (`sk-or-v1-...`) |
+| `LLM_MODEL` | optional, defaults to `nvidia/nemotron-3.5-lightning:free` |
+| `NODE_ENV` | `production` |
+
+4. Deploy (first import deploys automatically; later pushes deploy on merge to `main`).
+
+### Verify
+
+```bash
+curl https://<your-app>.vercel.app/health          # {"status":"ok","db":"connected"}
+curl -X POST https://<your-app>.vercel.app/monitor \
+  -H 'Content-Type: application/json' -d @backend/data/sample-input.json
+# open https://<your-app>.vercel.app  — dashboard with the new alert
+```
+
+Note: free-model ids rotate (`:free` variants retire). If alerts flip back to `alert_source: "fallback"`, the log shows the reason — swap `LLM_MODEL` for another active free model.
 
 ## Project structure
 
