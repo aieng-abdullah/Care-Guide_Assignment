@@ -10,6 +10,8 @@ const { config } = require('./config');
 const { requestLogger } = require('./middleware/requestLogger');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 const { healthRouter } = require('./routes/health.routes');
+const { monitorRouter } = require('./routes/monitor.routes');
+const { alertsRouter } = require('./routes/alerts.routes');
 
 const app = express();
 
@@ -20,6 +22,8 @@ app.use(express.json({ limit: '1mb' }));
 app.use(requestLogger);
 
 app.use('/', healthRouter);
+app.use('/', monitorRouter);
+app.use('/', alertsRouter);
 
 app.use(notFound);
 app.use(errorHandler);

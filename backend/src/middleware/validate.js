@@ -1,6 +1,6 @@
 /**
  * middleware/validate.js
- * Zod validation for POST /monitor batches; rejects unknown fields and returns 400 with field details. Exports monitorBatchSchema, validateBatch.
+ * Request-shape validation for POST /monitor (array bounds) plus the per-item Zod schema used by the monitor service. Exports monitorBatchSchema, apiResponseSchema, validateBatch.
  */
 const { z } = require('zod');
 const { ApiError } = require('./errorHandler');
@@ -19,10 +19,10 @@ const apiResponseSchema = z
   })
   .strict();
 
-/** Schema for the batch accepted by POST /monitor. */
-const monitorBatchSchema = z.array(apiResponseSchema).min(1).max(100);
+/** Schema for the batch accepted by POST /monitor; per-item checks happen in the service. */
+const monitorBatchSchema = z.array(z.unknown()).min(1).max(100);
 
-/** Express middleware validating req.body against the batch schema. */
+/** Express middleware validating that the body is a bounded batch array. */
 function validateBatch(req, res, next) {
   const result = monitorBatchSchema.safeParse(req.body);
   if (!result.success) {
@@ -30,9 +30,8 @@ function validateBatch(req, res, next) {
       path: issue.path.join('.') || '(body)',
       message: issue.message,
     }));
-    return next(ApiError.badRequest('VALIDATION_ERROR', 'Invalid monitor payload', details));
+    return next(ApiError.badRequest('VALIDATION_ERROR', 'Body must be a non-empty array of at most 100 API response objects', details));
   }
-  req.body = result.data;
   return next();
 }
 

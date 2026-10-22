@@ -1,14 +1,17 @@
 /**
  * tests/validate.test.js
- * Unit tests for the Zod batch validation middleware: valid payloads pass, malformed and unknown fields 400.
+ * Unit tests for batch shape validation and the per-item record schema.
  */
-const { monitorBatchSchema, validateBatch } = require('../src/middleware/validate');
+const { monitorBatchSchema, apiResponseSchema, validateBatch } = require('../src/middleware/validate');
 
-const validBatch = [
-  { api_name: 'PatientDataAPI', response_time_ms: 1200, status_code: 200, records_returned: 50 },
-];
+const validRecord = {
+  api_name: 'PatientDataAPI',
+  response_time_ms: 1200,
+  status_code: 200,
+  records_returned: 50,
+};
 
-/** Minimal express-like res/next doubles capturing the result. */
+/** Minimal express-like next double capturing the result. */
 function run(body) {
   const req = { body };
   let nextErr = null;
@@ -21,55 +24,68 @@ function run(body) {
   return { req, nextErr, nextCalled };
 }
 
-describe('monitorBatchSchema', () => {
-  test('valid batch passes', () => {
-    expect(monitorBatchSchema.safeParse(validBatch).success).toBe(true);
+describe('apiResponseSchema', () => {
+  test('valid record passes', () => {
+    expect(apiResponseSchema.safeParse(validRecord).success).toBe(true);
   });
 
   test('null records_returned passes (MISSING_DATA handles it)', () => {
-    const batch = [{ ...validBatch[0], records_returned: null }];
-    expect(monitorBatchSchema.safeParse(batch).success).toBe(true);
+    expect(apiResponseSchema.safeParse({ ...validRecord, records_returned: null }).success).toBe(true);
   });
 
   test('missing records_returned passes', () => {
-    const rest = { ...validBatch[0] };
+    const rest = { ...validRecord };
     delete rest.records_returned;
-    expect(monitorBatchSchema.safeParse([rest]).success).toBe(true);
+    expect(apiResponseSchema.safeParse(rest).success).toBe(true);
   });
 
   test('bad api_name charset fails', () => {
-    const batch = [{ ...validBatch[0], api_name: 'bad$name!' }];
-    expect(monitorBatchSchema.safeParse(batch).success).toBe(false);
+    expect(apiResponseSchema.safeParse({ ...validRecord, api_name: 'bad$name!' }).success).toBe(false);
   });
 
   test('status_code out of range fails', () => {
-    const batch = [{ ...validBatch[0], status_code: 99 }];
-    expect(monitorBatchSchema.safeParse(batch).success).toBe(false);
+    expect(apiResponseSchema.safeParse({ ...validRecord, status_code: 99 }).success).toBe(false);
   });
 
   test('unknown field fails', () => {
-    const batch = [{ ...validBatch[0], extra: true }];
-    expect(monitorBatchSchema.safeParse(batch).success).toBe(false);
+    expect(apiResponseSchema.safeParse({ ...validRecord, extra: true }).success).toBe(false);
   });
 
-  test('empty batch fails', () => {
-    expect(monitorBatchSchema.safeParse([]).success).toBe(false);
+  test('negative response_time_ms fails', () => {
+    expect(apiResponseSchema.safeParse({ ...validRecord, response_time_ms: -1 }).success).toBe(false);
   });
 });
 
-describe('validateBatch middleware', () => {
-  test('valid body calls next without error and keeps data', () => {
-    const { req, nextErr, nextCalled } = run(validBatch);
+describe('monitorBatchSchema and validateBatch middleware', () => {
+  test('valid batch array passes the middleware', () => {
+    const { nextErr, nextCalled } = run([validRecord]);
     expect(nextCalled).toBe(true);
     expect(nextErr).toBeNull();
-    expect(req.body).toEqual(validBatch);
   });
 
-  test('invalid body calls next with 400 field details', () => {
-    const { nextErr, nextCalled } = run([{ api_name: 'x', response_time_ms: -1, status_code: 999 }]);
-    expect(nextCalled).toBe(true);
+  test('mixed batch passes shape check (per-item handling is the service job)', () => {
+    const { nextErr } = run([validRecord, { broken: true }]);
+    expect(nextErr).toBeNull();
+  });
+
+  test('non-array body fails with 400', () => {
+    const { nextErr } = run({ api_name: 'x' });
     expect(nextErr.status).toBe(400);
     expect(nextErr.code).toBe('VALIDATION_ERROR');
-    expect(nextErr.details.length).toBeGreaterThan(0);
+  });
+
+  test('empty array fails with 400', () => {
+    const { nextErr } = run([]);
+    expect(nextErr.status).toBe(400);
+  });
+
+  test('oversized batch fails with 400', () => {
+    const batch = Array.from({ length: 101 }, () => ({ ...validRecord }));
+    const { nextErr } = run(batch);
+    expect(nextErr.status).toBe(400);
+  });
+
+  test('monitorBatchSchema accepts a valid array', () => {
+    expect(monitorBatchSchema.safeParse([validRecord]).success).toBe(true);
   });
 });
