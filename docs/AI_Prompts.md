@@ -61,3 +61,15 @@
 > Phase 4 frontend (FR-6) on `feat/llm-alerts`: React + Vite dashboard in `frontend/`. Requirements: list active alerts with API name, severity badge, AI message, metrics, rules triggered, first/last seen, occurrences count; filter by severity and API name; manual refresh plus optional 10s auto-refresh; summary counters (total/critical/warning); per-alert Resolve button calling `PATCH /alerts/:id/resolve`; textarea to paste a JSON batch and submit to `POST /monitor` with the run summary shown and per-item failure details surfaced; loading, empty, and error states; responsive layout, severity color-coded. Vite dev proxy for `/monitor`, `/alerts`, `/health` to localhost:3000. Flat ESLint config (js recommended + react-hooks + react/jsx-uses-vars). Match backend response shapes (`GET /alerts` returns `{data,total,page,limit}`; `/monitor` summary uses `failures` with `details`).
 - **Result summary:** 11 source files; ESLint clean, Vite build ~1.5s; live smoke: batch POST produced 1 healthy/1 anomaly/1 failed isolation, fallback message displayed path, resolve emptied the active list through the Vite proxy. Dep notes: frontend eslint pinned ^9 (react-hooks peer), eslint-plugin-react added for JSX var usage.
 - **Used as-is / Modified / Rejected:** Modified — initial eslint ^10 conflicted with react-hooks peer range (pinned ^9); `failures` field name corrected in MonitorForm after checking backend summary shape.
+
+---
+
+## Prompt #6
+- **Date/Time:** 2026-10-22 21:40
+- **AI Tool / Model:** OpenCode / opencode/mimo-v2.6-flash-free
+- **Category:** Docs
+- **Related file(s):** README.md
+- **Prompt (clean version):**
+> Rewrite root README for the Intelligent API Monitoring & Alert System. Must let a new developer run the project in under 10 minutes (acceptance criterion). Sections: one-line overview, feature list (detection rules, LLM alerts with fallback, dedup, batch isolation, dashboard, ops), tech stack table, prerequisites (Node 18+, Docker Mongo, optional OpenAI key — without key fallback works), quick start (clone, docker mongo, backend cp .env.example/install/dev, frontend install/dev, curl smoke tests), API table with request/response shapes, configuration table mapping every .env variable to default and meaning, lint/test commands with actual counts, project structure tree matching AGENTS layering, doc links (prd, prompt log, AGENTS). No secrets, only .env.example placeholders.
+- **Result summary:** Full README (~140 lines) covering setup, API, config table, structure, docs links; verified sample-input.json is a valid array for the curl smoke test and doc links resolve.
+- **Used as-is / Modified / Rejected:** Modified — dropped a misleading jq-wrap note after confirming the sample payload already posts as an array.
