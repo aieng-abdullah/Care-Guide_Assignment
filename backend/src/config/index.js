@@ -30,9 +30,10 @@ const config = Object.freeze({
   logLevel: process.env.LOG_LEVEL || 'info',
   mongoUri: process.env.MONGO_URI,
   llm: Object.freeze({
-    provider: process.env.LLM_PROVIDER || 'openai',
+    provider: process.env.LLM_PROVIDER || 'openrouter',
     apiKey: process.env.LLM_API_KEY || '',
-    model: process.env.LLM_MODEL || 'gpt-4o-mini',
+    baseUrl: process.env.LLM_BASE_URL || 'https://openrouter.ai/api/v1',
+    model: process.env.LLM_MODEL || 'minimax/minimax-m3.1-flash:free',
     timeoutMs: intFromEnv('LLM_TIMEOUT_MS', 5000),
     concurrency: intFromEnv('LLM_CONCURRENCY', 5),
   }),

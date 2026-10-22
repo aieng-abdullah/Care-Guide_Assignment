@@ -1,6 +1,6 @@
 # Intelligent API Monitoring & Alert System
 
-Monitors API response data, detects anomalies with configurable rules, generates human-readable alerts through an LLM (OpenAI) with a deterministic fallback, stores them in MongoDB, and surfaces them in a REST API and React dashboard.
+Monitors API response data, detects anomalies with configurable rules, generates human-readable alerts through an LLM (OpenRouter free model) with a deterministic fallback, stores them in MongoDB, and surfaces them in a REST API and React dashboard.
 
 ## The problem
 
@@ -16,7 +16,7 @@ Businesses integrate with many external APIs (patient data, appointments, lab re
 ## Features
 
 - **Anomaly detection** — 5 pure rule functions: high response time (warn/critical thresholds), 5xx failures, 4xx client errors, zero records on 2xx, missing records; one combined alert per API per run
-- **LLM alert text** — short human-readable message via OpenAI (`gpt-4o-mini`), prompt-injection-safe delimited input, automatic fallback template when the LLM is missing, fails, times out, or returns empty (`alert_source: "fallback"`)
+- **LLM alert text** — short human-readable message via an OpenRouter free model (`minimax/minimax-m3.1-flash:free`, configurable), prompt-injection-safe delimited input, automatic fallback template when the LLM is missing, fails, times out, or returns empty (`alert_source: "fallback"`)
 - **Deduplication** — active alerts for the same API + rule set increment `occurrences` and update `last_seen` instead of creating duplicates
 - **Batch processing** — up to 100 items per `POST /monitor`; one bad item never blocks the rest; LLM calls concurrency-limited (default 5)
 - **Dashboard** — React (Vite): alert cards with severity, metrics, AI message; filters; auto-refresh; resolve button; JSON submit form
@@ -58,7 +58,7 @@ Full diagrams, data model, and indexes: [`docs/Architecture .md`](docs/Architect
 | Rule registry of pure functions | Extend with one new file; unit-test edges (exactly at threshold, 4xx vs 5xx, null) | Slight indirection |
 | LLM only for anomalies, low temp + token cap | Cost and latency stay proportional to real problems | Healthy APIs get no AI text (not needed) |
 | Deterministic fallback template | LLM outage can never lose an alert | Less descriptive text in fallback mode |
-| Provider adapter behind an interface | Gemini/OpenAI swap via config, no logic changes | Small abstraction layer |
+| Provider adapter behind an interface | OpenAI-compatible APIs (OpenRouter/OpenAI/Gemini-style endpoints) swap via config | Small abstraction layer |
 | Fingerprint dedup via partial unique index + atomic upsert | No alert spam, safe under concurrent requests | Needs MongoDB partial index |
 | Per-item isolation (`allSettled` semantics) + p-limit concurrency (5) | One failed item or LLM call never breaks the batch; rate limits respected | Bounded throughput by design |
 | Prompt-injection safety: strict `api_name` charset + delimited data block | API input is data, never instructions | Rejects loosely formatted names |
@@ -71,7 +71,7 @@ Full diagrams, data model, and indexes: [`docs/Architecture .md`](docs/Architect
 |---|---|
 | Backend | Node.js 18+, Express 5 |
 | Database | MongoDB (Mongoose 8) |
-| LLM | OpenAI SDK (`gpt-4o-mini`) |
+| LLM | OpenRouter free model via OpenAI-compatible API |
 | Validation | Zod |
 | Logging | Winston |
 | Frontend | React 18 + Vite |
@@ -81,7 +81,7 @@ Full diagrams, data model, and indexes: [`docs/Architecture .md`](docs/Architect
 
 - Node.js 18 or newer
 - Docker (for MongoDB) — or any MongoDB 6+ instance
-- Optional: OpenAI API key (without it, all alerts use the fallback template)
+- Optional: free OpenRouter API key (https://openrouter.ai/keys; without it, all alerts use the fallback template)
 
 ## Quick start
 
@@ -100,7 +100,7 @@ docker run -d --name api-monitor-mongo -p 27017:27017 mongo:7
 
 ```bash
 cd backend
-cp .env.example .env        # add LLM_API_KEY if you have one
+cp .env.example .env        # paste a free key from openrouter.ai/keys for LLM text
 npm install
 npm run dev                 # http://localhost:3000
 ```
@@ -161,7 +161,9 @@ All tunables live in `backend/.env` (see `backend/.env.example`):
 | `MONGO_URI` | `mongodb://localhost:27017/api-monitor` | Database connection |
 | `THRESHOLD_RESPONSE_WARN_MS` | `3000` | Response-time warning threshold |
 | `THRESHOLD_RESPONSE_CRIT_MS` | `5000` | Response-time critical threshold |
-| `LLM_API_KEY` | — | OpenAI key; empty → fallback templates |
+| `LLM_BASE_URL` | `https://openrouter.ai/api/v1` | OpenAI-compatible API endpoint |
+| `LLM_MODEL` | `minimax/minimax-m3.1-flash:free` | Any OpenRouter free model id |
+| `LLM_API_KEY` | — | OpenRouter key; empty → fallback templates |
 | `LLM_TIMEOUT_MS` | `5000` | LLM request timeout |
 | `LLM_CONCURRENCY` | `5` | Max parallel LLM calls |
 | `RATE_LIMIT_MAX` | `100` | Requests per window on `/monitor` |
@@ -174,7 +176,7 @@ cd backend && npm run lint && npm test   # 53 tests (rules, validation, integrat
 cd frontend && npm run lint && npm run build
 ```
 
-Integration tests mock the OpenAI SDK and require MongoDB running.
+Integration tests mock the LLM HTTP client and require MongoDB running.
 
 ## Project structure
 

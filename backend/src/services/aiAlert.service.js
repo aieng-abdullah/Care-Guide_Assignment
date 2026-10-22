@@ -4,7 +4,7 @@
  */
 const { config } = require('../config');
 const { logger } = require('../utils/logger');
-const { createOpenAIProvider } = require('./providers/openai.provider');
+const { createOpenAICompatProvider } = require('./providers/openaiCompat.provider');
 const prompts = require('./prompts/alertPrompt.v1');
 
 /** Returns the deterministic fallback alert sentence for an anomaly, phrased like the PRD example. */
@@ -68,7 +68,7 @@ function createAiAlertService({ provider }) {
 }
 
 const aiAlertService = createAiAlertService({
-  provider: createOpenAIProvider(config.llm),
+  provider: createOpenAICompatProvider(config.llm),
 });
 
 module.exports = { createAiAlertService, aiAlertService, buildFallbackMessage };

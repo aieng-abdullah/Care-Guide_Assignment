@@ -391,7 +391,7 @@ project/
         detector.service.js      # Runs the rule registry
         rules/                   # One file per detection rule
         aiAlert.service.js       # Prompt, LLM call, fallback
-        providers/               # gemini.provider.js, openai.provider.js
+        providers/               # openaiCompat.provider.js (OpenRouter/OpenAI-compatible)
         prompts/                 # Versioned alert prompt templates
         email.service.js         # Optional email reports
       repositories/
