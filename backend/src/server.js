@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 
 const { config } = require('./config');
 const { logger } = require('./utils/logger');
+const { connectOnce } = require('./db');
 const { app } = require('./app');
 
 /** Closes the server and DB connection, then exits. */
@@ -23,8 +24,7 @@ async function shutdown(signal) {
 /** Connects to MongoDB and starts the HTTP server. */
 async function start() {
   try {
-    await mongoose.connect(config.mongoUri);
-    logger.info('mongo connected', { uri: config.mongoUri.replace(/\/\/[^@]*@/, '//[REDACTED]@') });
+    await connectOnce();
 
     const server = app.listen(config.port, () => {
       logger.info('server started', { port: config.port, env: config.env });
