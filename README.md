@@ -125,6 +125,13 @@ curl -s -X POST localhost:3000/monitor \
 curl -s localhost:3000/alerts
 ```
 
+Static JSON file input (alternative to curl):
+
+```bash
+cd backend
+npm run monitor:file -- data/sample-input.json   # or -- --url=http://host:3000
+```
+
 ## API
 
 | Method | Endpoint | Purpose |
