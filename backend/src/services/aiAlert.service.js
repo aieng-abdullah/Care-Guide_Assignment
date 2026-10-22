@@ -7,17 +7,27 @@ const { logger } = require('../utils/logger');
 const { createOpenAIProvider } = require('./providers/openai.provider');
 const prompts = require('./prompts/alertPrompt.v1');
 
-/** Returns the deterministic fallback alert sentence for an anomaly. */
+/** Returns the deterministic fallback alert sentence for an anomaly, phrased like the PRD example. */
 function buildFallbackMessage(anomaly) {
-  const records =
-    anomaly.metrics.records_returned === null
-      ? 'records missing'
-      : `${anomaly.metrics.records_returned} records`;
-  return (
-    `${anomaly.api_name} triggered ${anomaly.rules_triggered.join(', ')} ` +
-    `(severity: ${anomaly.severity}) — status ${anomaly.metrics.status_code}, ` +
-    `${anomaly.metrics.response_time_ms} ms, ${records}. Possible outage or data issue.`
-  );
+  const { metrics, rules_triggered: rules } = anomaly;
+  const parts = [];
+  if (rules.includes('FAILED_REQUEST')) {
+    parts.push(`failed with status ${metrics.status_code}`);
+  } else if (rules.includes('CLIENT_ERROR')) {
+    parts.push(`returned status ${metrics.status_code}`);
+  }
+  if (rules.includes('HIGH_RESPONSE_TIME')) {
+    parts.push(`was slow (${metrics.response_time_ms} ms)`);
+  }
+  if (metrics.records_returned === 0) {
+    parts.push('returned 0 records');
+  } else if (metrics.records_returned === null || metrics.records_returned === undefined) {
+    parts.push('returned an unknown record count');
+  }
+  if (parts.length === 0) {
+    parts.push(`returned status ${metrics.status_code}`);
+  }
+  return `${anomaly.api_name} ${parts.join(', ')}. Possible outage or data issue.`;
 }
 
 /**
