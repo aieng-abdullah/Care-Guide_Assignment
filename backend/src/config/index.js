@@ -33,8 +33,9 @@ const config = Object.freeze({
     provider: process.env.LLM_PROVIDER || 'openrouter',
     apiKey: process.env.LLM_API_KEY || '',
     baseUrl: process.env.LLM_BASE_URL || 'https://openrouter.ai/api/v1',
-    model: process.env.LLM_MODEL || 'minimax/minimax-m3.1-flash:free',
+    model: process.env.LLM_MODEL || 'nvidia/nemotron-3.5-lightning:free',
     timeoutMs: intFromEnv('LLM_TIMEOUT_MS', 5000),
+    maxTokens: intFromEnv('LLM_MAX_TOKENS', 300),
     concurrency: intFromEnv('LLM_CONCURRENCY', 5),
   }),
   cors: Object.freeze({

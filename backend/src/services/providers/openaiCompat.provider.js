@@ -30,7 +30,8 @@ function createOpenAICompatProvider(llmConfig) {
     const response = await getClient().chat.completions.create({
       model: llmConfig.model,
       temperature: 0.3,
-      max_tokens: 80,
+      max_tokens: llmConfig.maxTokens || 300,
+      reasoning: { enabled: false },
       messages: [
         { role: 'system', content: system },
         { role: 'user', content: user },
