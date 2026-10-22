@@ -73,3 +73,15 @@
 > Rewrite root README for the Intelligent API Monitoring & Alert System. Must let a new developer run the project in under 10 minutes (acceptance criterion). Sections: one-line overview, feature list (detection rules, LLM alerts with fallback, dedup, batch isolation, dashboard, ops), tech stack table, prerequisites (Node 18+, Docker Mongo, optional OpenAI key — without key fallback works), quick start (clone, docker mongo, backend cp .env.example/install/dev, frontend install/dev, curl smoke tests), API table with request/response shapes, configuration table mapping every .env variable to default and meaning, lint/test commands with actual counts, project structure tree matching AGENTS layering, doc links (prd, prompt log, AGENTS). No secrets, only .env.example placeholders.
 - **Result summary:** Full README (~140 lines) covering setup, API, config table, structure, docs links; verified sample-input.json is a valid array for the curl smoke test and doc links resolve.
 - **Used as-is / Modified / Rejected:** Modified — dropped a misleading jq-wrap note after confirming the sample payload already posts as an array.
+
+---
+
+## Prompt #7
+- **Date/Time:** 2026-10-23 02:55
+- **AI Tool / Model:** OpenCode / opencode/mimo-v2.6-flash-free
+- **Category:** Docs
+- **Related file(s):** README.md
+- **Prompt (clean version):**
+> Polish README with three missing narrative sections: (1) The problem — why the system exists: external APIs fail intermittently and silently (200 with 0 records), raw signals scattered across logs, no shared "what is broken right now" view, alert fatigue from repeats; state concretely what the system solves with an example operator-facing sentence. (2) Architecture — ASCII pipeline diagram (input → validation → monitor service → detector/AI service/repository → MongoDB → dashboard), one-way layering explanation, and the 5-step request flow for a batch. (3) Key design decisions — distilled Decision/Why/Trade-off table covering layering, rule registry, LLM-only-for-anomalies, fallback, provider adapter, fingerprint dedup, per-item isolation + concurrency, prompt-injection safety, stateless server, sync-now-queue-later; source from docs/Architecture .md section 13 but shorter for README reading. Link the full architecture doc from Documentation section.
+- **Result summary:** README grew from 138 to 193 lines with problem/architecture/decisions sections; all internal links verified resolving (incl. URL-encoded `Architecture .md`); one grammar fix applied.
+- **Used as-is / Modified / Rejected:** Modified — corrected a missing "via" in the problem statement and an "LLM" typo in the decisions table before committing.
