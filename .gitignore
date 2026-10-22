@@ -17,6 +17,7 @@ node_modules/
 dist/
 build/
 coverage/
+.vite/
 npm-debug.log*
 yarn-error.log*
 pnpm-debug.log*
